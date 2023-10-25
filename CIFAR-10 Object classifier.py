@@ -133,7 +133,6 @@ Model.compile(optimizer='adam',loss='sparse_categorical_crossentropy',metrics=['
 # train the model with train input and label data
 result = Model.fit(x_train,y_train,epochs=30,validation_split=0.1)
 
-
 # Visualize the accuracy with the validation accuracy
 plt.figure(figsize=(7,7))
 plt.plot(result.history['accuracy'],color='red')
@@ -150,6 +149,11 @@ plt.title('model loss')
 plt.xlabel('epochs')
 plt.ylabel('accuracy')
 plt.legend(['loss','val_loss'],loc='upper right')
+
+# evaluate the model
+evaluation = Model.evaluate(x_test,y_test)
+print("the loss value is: ",evaluation[0])
+print("the accuracy value is: ",evaluation[1])
 
 # Make the model predict on test input data
 predicted_y = Model.predict(x_test)
