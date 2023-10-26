@@ -23,8 +23,8 @@ import matplotlib.pyplot as plt
 import random
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Input,Conv2D,MaxPooling2D,Flatten,Dropout,Dense
-from tensorflow.math import confusion_matrix
+from tensorflow.keras.layers import Input,Conv2D,MaxPooling2D,Flatten,Dense
+from sklearn.metrics import confusion_matrix, classification_report
 import seaborn as sns
 import pickle as pk
 
@@ -85,18 +85,15 @@ Y = []
 for feature,label in data:
     X.append(feature)
     Y.append(label)
-
 # Convert input and label data into numpy array
 X = np.array(X)
 Y = np.array(Y)
-
 # Show the first image before scaling the images
 print(X[0])
 # Scaling input data
 X = X/255
 # Show the first image after scaling the images
 print(X[0])
-
 # Show the shape of input and label data
 print(X.shape)
 print(Y.shape)
@@ -108,55 +105,68 @@ print(X.shape,x_train.shape,x_test.shape)
 print(Y.shape,y_train.shape,y_test.shape)
 
 
-# Create the model
-input_size = (32,32,3) # Determine input size
+# Determine input size for the NN and CNN
+input_size = (32,32,3) 
 # Determine number of classes
 num_classes = 10
 
-# Create the model
-Model = Sequential([
-    Input(shape=input_size),
-    Conv2D(32, (3, 3), activation='relu'),
-    MaxPooling2D((2, 2)),
-    Conv2D(64, (3, 3), activation='relu'),
-    MaxPooling2D((2, 2)),
-    Conv2D(128, (3, 3), activation='relu'),
-    MaxPooling2D((2, 2)),
-    Flatten(),
-    
-    Dense(128, activation='relu'),
-    Dropout(0.5),
-    Dense(num_classes, activation='softmax')
+
+# Create NN 
+image_size=(32, 32, 3) # Determine the input shape for NN
+Num_classes = 10
+NNModel = Sequential([
+    Flatten(input_shape=image_size),
+    Dense(1000,activation='relu'),
+    Dense(1000,activation='relu'),
+    Dense(Num_classes,activation='sigmoid')
 ])
-# compile the model 
-Model.compile(optimizer='adam',loss='sparse_categorical_crossentropy',metrics=['accuracy'])
+# compile the NNModel 
+NNModel.compile(optimizer='SGD',loss='sparse_categorical_crossentropy',metrics=['accuracy'])
+# train the NNModel with train input and label data
+NNresult = NNModel.fit(x_train,y_train,epochs=10,validation_split=0.1)
+
+
+# Create the CNN model
+CNNModel = Sequential([
+    Input(shape=image_size),
+    Conv2D(32,(3,3),activation='relu'),
+    MaxPooling2D((2,2)),
+    Conv2D(64,(3,3),activation='relu'),
+    MaxPooling2D((2,2)),
+    
+    Flatten(),
+    Dense(64,activation='relu'),
+    Dense(Num_classes,activation='softmax')
+])
+# compile the CNNModel
+CNNModel.compile(optimizer='adam',loss='sparse_categorical_crossentropy',metrics=['accuracy'])
 # train the model with train input and label data
-result = Model.fit(x_train,y_train,epochs=30,validation_split=0.1)
+CNNresult = CNNModel.fit(x_train,y_train,epochs=10,validation_split=0.1)
 
 # Visualize the accuracy with the validation accuracy
 plt.figure(figsize=(7,7))
-plt.plot(result.history['accuracy'],color='red')
-plt.plot(result.history['val_accuracy'],color='blue')
+plt.plot(CNNresult.history['accuracy'],color='red')
+plt.plot(CNNresult.history['val_accuracy'],color='blue')
 plt.title('model accuracy')
 plt.xlabel('epochs')
 plt.ylabel('accuracy')
 plt.legend(['accuracy','val_accuracy'],loc='lower right')
 # Visualize the loss with the validation loss
 plt.figure(figsize=(7,7))
-plt.plot(result.history['loss'],color='red')
-plt.plot(result.history['val_loss'],color='blue')
+plt.plot(CNNresult.history['loss'],color='red')
+plt.plot(CNNresult.history['val_loss'],color='blue')
 plt.title('model loss')
 plt.xlabel('epochs')
 plt.ylabel('accuracy')
 plt.legend(['loss','val_loss'],loc='upper right')
 
 # evaluate the model
-evaluation = Model.evaluate(x_test,y_test)
+evaluation = CNNModel.evaluate(x_test,y_test)
 print("the loss value is: ",evaluation[0])
 print("the accuracy value is: ",evaluation[1])
 
 # Make the model predict on test input data
-predicted_y = Model.predict(x_test)
+predicted_y = CNNModel.predict(x_test)
 y_predicted_values = []
 for value in predicted_y:
     y_predicted_values.append(np.argmax(value))
@@ -168,10 +178,13 @@ print(comparison)
 plt.figure(figsize=(5,5))
 conf_matrix = confusion_matrix(y_test,y_predicted_values)
 sns.heatmap(conf_matrix,square=True,cbar=True,annot=True,annot_kws={'size':8},cmap='Blues')
+# Create a classification report
+class_report = classification_report(y_test,y_predicted_values)
+print(class_report)
 
 
 # Save the model
-pk.dump(Model,open('trained_model.sav','wb'))
+pk.dump(CNNModel,open('trained_model.sav','wb'))
 
 
 # Make a predictive system 
@@ -185,9 +198,7 @@ if image.shape[-1] == 1:
 # Normalize the image by scaling it
 image = image / 255
 # Make the model predict what is in the image if it's dog will print 1 otherwise will print 0
-prediction = Model.predict(np.expand_dims(image, axis=0))
+prediction = CNNModel.predict(np.expand_dims(image, axis=0))
 predicted_class = np.argmax(prediction)
 # Replace the encoded label with the original label 
 print(classes[predicted_class])
-
-
